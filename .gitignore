@@ -1,0 +1,4 @@
+.env
+[server]
+enableXsrfProtection = false
+enableCORS = false
