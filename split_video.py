@@ -154,86 +154,109 @@ async def analyze_photo_dataurl(data_url: str, index: int | None = None) -> str:
     data_url = downscale_data_url(data_url)
     
     prompt = """
-    identify if theres someone drowning or not, but theres a difference between drowning and swimming too,:
-    Vertical body position
-    The swimmer remains upright in the water rather than a horizontal stroke position. 
-    Arms extended laterally, "pressing down"
-    Arms move out to the sides and push down on the water surface (as if climbing an invisible ladder), not flailing above the head. 
-    No effective leg kick or forward motion
-    Legs are inactive or only kicking weakly; despite frantic arm movements, the person makes little or no progress. 
+    You are an AI model for training purposes (not a real lifeguard).
+    Task: Given a video clip of someone in water, classify their behavior as Swimming or Drowning using the criteria below. For each person you label, list the specific cues you observed.
 
-    Head tilted back, mouth at waterline
-    Chin lifts, mouth bobbing just at or below the surface in rapid gasps—too busy breathing to call for help. 
-    and their hands might be up for help too
-    and their body could be up and down and up and down
-    Hair covering face / glassy or closed eyes
-    Victim often can't brush hair away and may have a blank, unfocused stare or shut eyes. 
+    Identification Criteria
+    1. Body Orientation & Motion
 
-    Silent struggle—no waving or shouting
-    True drowning is almost always quiet; the body's instinct to breathe overrides any attempt to call out. 
-    arm waving ask for helpKey Differences
+    Swimming: Torso stays horizontal and moves smoothly through the water.
 
-    Feature    Swimming    Drowning (Instinctive Response)
-    Body Orientation    Mostly horizontal—torso parallel to water.    Nearly vertical or head‐low; little to no leg lift.
-    Arm Movement    Coordinated strokes (freestyle, breaststroke)    Pressing down at the sides to try to lift the mouth.
-    Leg Action    Steady kicking in time with arms.    Minimal or no kicking; legs often hang down.
-    Breathing    Regular face‐in‐water intervals, then inhale.    Mouth at water level gasping, unable to do a proper breath.
-    Head Position    Head turns smoothly to breathe; eyes forward.    Head tilted back or tipped forward, with eyes glassy or closed.
-    Splash & Sound    Audible splashes, splashing directed backward.    Quiet or minimal splashes; victims can't call or wave.
-    Movement through water    Clear forward progress.    Little to no forward movement; may stay in one spot.
-    Duration    Can be sustained arbitrarily long.    Panic lasts ~20–60 seconds before submerging.
-    How to Identify Drowning, Step by Step
-    Watch Their Body Line
+    Drowning: Body becomes nearly vertical, hips stay low, and may bob up and down without forward tilt.
 
-    Swimming: Upper body and hips rise and fall smoothly.
+    2. Arm Movement
 
-    Drowning: Almost vertical–only head and shoulders break the surface.
+    Swimming: Arms execute coordinated full strokes (e.g. freestyle, breaststroke), pushing water backward.
 
-    Observe Arm Action
+    Drowning: Arms extend out to the sides and press down on the surface—like climbing an invisible ladder—instead of stroking above the head.
 
-    Swimming: Arms move in full strokes, pushing water backward.
+    3. Leg Action & Forward Progress
 
-    Drowning: Arms extend laterally then press down against water in an attempt to lift the mouth.
-    Check Leg Kick
+    Swimming: Legs kick steadily (flutter or whip kick) in sync with the arms, producing clear forward movement.
 
-    Swimming: Steady flutter or whip kick.
+    Drowning: Legs kick weakly or hang limply; despite frantic arm presses, there is little to no forward progress.
 
-    Drowning: Little or no kicking; legs hang limply or scissor under.
+    4. Head Position & Breathing
 
-    Listen for Noise
+    Swimming: Head rotates smoothly to breathe, lifting above the surface in a regular rhythm; eyes are open and focused.
 
-    Swimming: You'll hear exhalations, splashes, maybe talking or calling out.
+    Drowning: Head tilts back (chin up) so the mouth bobs at or just below the waterline, gasping rapidly—too preoccupied with breathing to call for help.
 
-    Drowning: Largely silent; drowning victims can't call for help or wave.
+    5. Facial & Hair Cues
 
-    Head & Face Cues
+    Victims may have hair plastered over the face and cannot brush it away.
 
-    Swimming: Face submerged partway during stroke, then lifts for breaths, eyes open.
+    Eyes may appear glassy, closed, or unfocused.
 
-    Drowning: Mouth at water level; chin tucked; eyes glassy, closed, or unfocused.
+    6. Behavioral Signs & Sound
 
-    Progress in Water
+    Swimming: You'll hear audible splashes, exhalations, talking, or purposeful waving.
 
-    Swimming: Noticeable forward motion.
+    Drowning: The struggle is almost always silent—there's no calling out or waving because the body's reflex to breathe dominates.
 
-    Drowning: Stationary or drifting; doesn't move toward safety.
+    7. Duration
 
-    Duration of Signs
+    Swimming: Patterns of stroke and breathing repeat reliably and can be sustained indefinitely.
 
-    Swimming: Patterns repeat reliably.
+    Drowning: Panic response is brief (about 20–60 seconds) before the person submerges.
 
-    Drowning: Signs appear suddenly and persist only briefly (about 20–60 s) before sinking.
+    Step-by-Step Identification
+    Assess Body Line:
 
-    Quick "Red Flags" Checklist
-    Vertical posture with little leg movement
+    If the torso is horizontal and gliding → Swimming
 
-    Head low in water—mouth barely above surface
+    If the body is vertical and bobbing → Drowning
 
-    No forward progress despite vigorous arm presses
+    Watch the Arms:
 
-    Silent struggle (no yelling or waving)
+    Full, rhythmic strokes pulling water backward → Swimming
 
-    Panicked, glassy-eyed expression
+    Lateral pressing motions at the water's surface → Drowning
+
+    Check the Legs:
+
+    Strong, timed kicks driving forward movement → Swimming
+
+    Weak or absent kicks with no net motion → Drowning
+
+    Observe Breathing:
+
+    Lift, inhale, submerge in a steady cycle → Swimming
+
+    Rapid, panicked gasps at the waterline → Drowning
+
+    Listen and Look for Sound:
+
+    Splashing, talking, or shouting → Swimming
+
+    Silence or only faint splashes → Drowning
+
+    Measure Progress:
+
+    Moves toward safety or across a lap → Swimming
+
+    Drifts in place or stalls despite effort → Drowning
+
+    Note Timing:
+
+    Repeating stroke patterns → Swimming
+
+    Brief, frantic struggle then sinking → Drowning
+
+    Quick "Red Flags" to Trigger a Drowning Alert
+    Nearly vertical posture, body bobbing
+
+    Mouth at waterline, rapid gasping
+
+    Arms pressing down rather than stroking
+
+    Legs inactive or kicking weakly
+
+    Silent struggle with minimal splash
+
+    Hair covering the face; glassy or closed eyes
+
+    Use these cues to label each swimmer in the clip.
     """
 
     content = [
@@ -301,98 +324,104 @@ async def get_rectangles(data_url: str) -> List[Union[tuple[int, int, int, int],
     # Downscale the image in the data URL if needed
     data_url = downscale_data_url(data_url)
     
-    prompt = """
-        identify if theres someone drowning or not, but theres a difference between drowning and swimming too,:
-    Vertical body position
-    The swimmer remains upright in the water rather than a horizontal stroke position. 
-    Arms extended laterally, "pressing down"
-    Arms move out to the sides and push down on the water surface (as if climbing an invisible ladder), not flailing above the head. 
-    No effective leg kick or forward motion
-    Legs are inactive or only kicking weakly; despite frantic arm movements, the person makes little or no progress. 
+    prompt = """You are an AI model for training purposes (not a real lifeguard).
+    Task: Given a video clip of someone in water, classify their behavior as Swimming or Drowning using the criteria below. For each person you label, list the specific cues you observed, and determine whether they look drowning or just swimming, based on previous observation too
 
-    Head tilted back, mouth at waterline
-    Chin lifts, mouth bobbing just at or below the surface in rapid gasps—too busy breathing to call for help. 
-    and their hands might be up for help too
-    and their body could be up and down and up and down
-    Hair covering face / glassy or closed eyes
-    Victim often can't brush hair away and may have a blank, unfocused stare or shut eyes. 
+    Identification Criteria
+    1. Body Orientation & Motion
 
-    Silent struggle—no waving or shouting
-    True drowning is almost always quiet; the body's instinct to breathe overrides any attempt to call out. 
-    arm waving ask for helpKey Differences
+    Swimming: Torso stays horizontal and moves smoothly through the water.
 
-    Feature    Swimming    Drowning (Instinctive Response)
-    Body Orientation    Mostly horizontal—torso parallel to water.    Nearly vertical or head‐low; little to no leg lift.
-    Arm Movement    Coordinated strokes (freestyle, breaststroke)    Pressing down at the sides to try to lift the mouth.
-    Leg Action    Steady kicking in time with arms.    Minimal or no kicking; legs often hang down.
-    Breathing    Regular face‐in‐water intervals, then inhale.    Mouth at water level gasping, unable to do a proper breath.
-    Head Position    Head turns smoothly to breathe; eyes forward.    Head tilted back or tipped forward, with eyes glassy or closed.
-    Splash & Sound    Audible splashes, splashing directed backward.    Quiet or minimal splashes; victims can't call or wave.
-    Movement through water    Clear forward progress.    Little to no forward movement; may stay in one spot.
-    Duration    Can be sustained arbitrarily long.    Panic lasts ~20–60 seconds before submerging.
-    How to Identify Drowning, Step by Step
-    Watch Their Body Line
+    Drowning: Body becomes nearly vertical, hips stay low, and may bob up and down without forward tilt.
 
-    Swimming: Upper body and hips rise and fall smoothly.
+    2. Arm Movement
 
-    Drowning: Almost vertical–only head and shoulders break the surface.
+    Swimming: Arms execute coordinated full strokes (e.g. freestyle, breaststroke), pushing water backward.
 
-    Observe Arm Action
+    Drowning: Arms extend out to the sides and press down on the surface—like climbing an invisible ladder—instead of stroking above the head.
 
-    Swimming: Arms move in full strokes, pushing water backward.
+    3. Leg Action & Forward Progress
 
-    Drowning: Arms extend laterally then press down against water in an attempt to lift the mouth.
-    Check Leg Kick
+    Swimming: Legs kick steadily (flutter or whip kick) in sync with the arms, producing clear forward movement.
 
-    Swimming: Steady flutter or whip kick.
+    Drowning: Legs kick weakly or hang limply; despite frantic arm presses, there is little to no forward progress.
 
-    Drowning: Little or no kicking; legs hang limply or scissor under.
+    4. Head Position & Breathing
 
-    Listen for Noise
+    Swimming: Head rotates smoothly to breathe, lifting above the surface in a regular rhythm; eyes are open and focused.
 
-    Swimming: You'll hear exhalations, splashes, maybe talking or calling out.
+    Drowning: Head tilts back (chin up) so the mouth bobs at or just below the waterline, gasping rapidly—too preoccupied with breathing to call for help.
 
-    Drowning: Largely silent; drowning victims can't call for help or wave.
+    5. Facial & Hair Cues
 
-    Head & Face Cues
+    Victims may have hair plastered over the face and cannot brush it away.
 
-    Swimming: Face submerged partway during stroke, then lifts for breaths, eyes open.
+    Eyes may appear glassy, closed, or unfocused.
 
-    Drowning: Mouth at water level; chin tucked; eyes glassy, closed, or unfocused.
+    7. Duration
 
-    Progress in Water
+    Swimming: Patterns of stroke and breathing repeat reliably and can be sustained indefinitely.
 
-    Swimming: Noticeable forward motion.
+    Drowning: Panic response is brief (about 20–60 seconds) before the person submerges.
 
-    Drowning: Stationary or drifting; doesn't move toward safety.
+    Step-by-Step Identification
+    Assess Body Line:
 
-    Duration of Signs
+    If the torso is horizontal and gliding → Swimming
 
-    Swimming: Patterns repeat reliably.
+    If the body is vertical and bobbing → Drowning
 
-    Drowning: Signs appear suddenly and persist only briefly (about 20–60 s) before sinking.
+    Watch the Arms:
 
-    Quick "Red Flags" Checklist
-    Vertical posture with little leg movement
+    Full, rhythmic strokes pulling water backward → Swimming
 
-    Head low in water—mouth barely above surface
+    Lateral pressing motions at the water’s surface → Drowning
 
-    No forward progress despite vigorous arm presses
+    Check the Legs:
 
-    Silent struggle (no yelling or waving)
+    Strong, timed kicks driving forward movement → Swimming
 
-    Panicked, glassy-eyed expression
+    Weak or absent kicks with no net motion → Drowning
 
-    for each someone see if you can give bounding box coordinates in exactly this JSON format:
-    [["green", x1, y1, x2, y2], ["red", x1, y1, x2, y2], ["yellow", x1, y1, x2, y2]]
+    Observe Breathing:
 
-    red means red flag
-    green means good, regular swimming
-    yellow = not sure, potential signs
+    Lift, inhale, submerge in a steady cycle → Swimming
 
-    you must give exactly JSON format as above, but you can have more items in the outer list, each inner should have
-    a string that's either green, red, or yellow, and the 4 numbers are x1, y1, x2, y2
-    return nothing in addition to the JSON
+    Rapid, panicked gasps at the waterline → Drowning
+
+    Listen and Look for Sound:
+
+    Splashing, talking, or shouting → Swimming
+
+    Silence or only faint splashes → Drowning
+
+    Measure Progress:
+
+    Moves toward safety or across a lap → Swimming
+
+    Drifts in place or stalls despite effort → Drowning
+
+    Note Timing:
+
+    Repeating stroke patterns → Swimming
+
+    Brief, frantic struggle then sinking → Drowning
+
+    Quick “Red Flags” to Trigger a Drowning Alert
+    Nearly vertical posture, body bobbing
+
+    Mouth at waterline, rapid gasping
+
+    Arms pressing down rather than stroking
+
+    Legs inactive or kicking weakly
+
+    Silent struggle with minimal splash
+
+    Hair covering the face; glassy or closed eyes
+
+    Use these cues to label each swimmer in the clip.
+
     """
     content = [
         {"type": "input_text",  "text": prompt},
