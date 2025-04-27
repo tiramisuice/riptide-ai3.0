@@ -390,7 +390,7 @@ async def process_drowning_likelihood():
                 print("No snapshots available for drowning likelihood analysis")
             
             # Wait for 3 seconds before the next analysis
-            for _ in range(30):  # 30 x 0.1s = 3s
+            for _ in range(5):  # 5 x 0.1s = 0.5s
                 await asyncio.sleep(0.1)
                 if drowning_analysis_stop_event.is_set():
                     break
