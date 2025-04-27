@@ -61,13 +61,19 @@ def extract_frames_in_memory(video_path, frame_delay):
 
 # ─── Async Photo Analyzer ───────────────────────────────────────────────────────
 
-async def analyze_photo_dataurl(data_url: str, index: int) -> str:
+async def analyze_photo_dataurl(data_url: str, index: int | None = None) -> str:
     """
     Send the image (as a Data URL) to OpenAI's Responses API (gpt-4o)
     and return a summary of what's in the photo.
     """
     print(f"[debug] [{index}] Sending image to GPT-4o for analysis...")
     prompt = (
+        "You are a lifeguard tasked with identifying potentially drowning people in a pool.\n"
+        "Some rules of thumb: False positives are infinitely better than false negatives.\n"
+        "Drowning people often go unnoticed because they look like regular people in a pool.\n"
+        "Most often they don't thrash around, and silently sink in the pool.\n"
+        "Therefore you must be very careful in your analysis, as lives are at stake.\n"
+        "Right now you must carefully take notes on photos that were taken every {FRAME_DELAY} seconds.\n"
         "In super concise form, record coordinates of each person in the photo\n"
         "and their arm pose, how submerged they are in the water (including whether head is submerged)\n"
         "and their position relative to the water (above, below, or in the water)\n"

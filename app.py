@@ -32,6 +32,10 @@ alarm_cooldown = st.sidebar.slider("Alarm cooldown (seconds)", 1, 30, 5)
 pose_duration_threshold = st.sidebar.slider("Hands raised duration (seconds)", 1, 10, 3)
 percentage_threshold = st.sidebar.slider("% of time hands must be raised", 50, 100, 90, 5)
 
+# Video settings in sidebar
+st.sidebar.header("Video Settings")
+rotation_angle = st.sidebar.selectbox("Rotation angle", [0, 90, 180, 270], index=0)
+
 # Get the alarm audio data
 alarm_audio = get_alarm_audio()
 if enable_alarm and alarm_audio is None:
@@ -65,7 +69,7 @@ pose_detector_html = f"""
     #webcam {{
       width: 100%;
       height: auto;
-      transform: rotateY(180deg);
+      transform: rotateY(180deg) rotate({rotation_angle}deg);
     }}
     #output_canvas {{
       position: absolute;
@@ -73,7 +77,13 @@ pose_detector_html = f"""
       top: 0;
       width: 100%;
       height: 100%;
-      transform: rotateY(180deg);
+      transform: rotateY(180deg) rotate({rotation_angle}deg);
+    }}
+    #camera-controls {{
+      margin: 10px 0;
+      padding: 5px;
+      background-color: rgba(0,0,0,0.1);
+      border-radius: 5px;
     }}
     #fps-counter {{
       position: absolute;
@@ -101,6 +111,12 @@ pose_detector_html = f"""
   </style>
 </head>
 <body>
+  <div id="camera-controls">
+    <select id="camera-select">
+      <option value="">Loading cameras...</option>
+    </select>
+    <button id="switch-camera">Switch Camera</button>
+  </div>
   <div id="liveView">
     <video id="webcam" autoplay playsinline></video>
     <canvas id="output_canvas"></canvas>
@@ -115,7 +131,8 @@ pose_detector_html = f"""
       visibilityThreshold: {visibility_threshold},
       bothHandsRequired: {str(both_hands_required).lower()},
       durationThreshold: {pose_duration_threshold * 1000},  // Convert to milliseconds
-      percentageThreshold: {percentage_threshold}  // Percentage of time hands must be raised
+      percentageThreshold: {percentage_threshold},  // Percentage of time hands must be raised
+      rotationAngle: {rotation_angle}  // Rotation angle in degrees
     }};
   </script>
   
@@ -133,6 +150,8 @@ pose_detector_html = f"""
     const canvasCtx = canvasElement.getContext('2d');
     const fpsCounter = document.getElementById('fps-counter');
     const debugOverlay = document.getElementById('debug-overlay');
+    const cameraSelect = document.getElementById('camera-select');
+    const switchCameraButton = document.getElementById('switch-camera');
     
     // State variables
     let poseLandmarker = null;
@@ -144,6 +163,9 @@ pose_detector_html = f"""
     let handsRaised = false;
     let handsRaisedStartTime = 0;
     let debugInfo = {{}};
+    let currentStream = null;
+    let availableCameras = [];
+    let selectedCameraId = null;
     
     // Window for tracking hands raised percentage
     const windowSize = 30; // Frames to consider (should cover roughly 3 seconds at 30fps)
@@ -152,6 +174,71 @@ pose_detector_html = f"""
     
     // Access config from window object
     const config = window.poseConfig;
+    
+    // Initialize camera selection UI
+    async function initCameraSelection() {{
+      try {{
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        availableCameras = devices.filter(device => device.kind === 'videoinput');
+        
+        // Clear existing options
+        cameraSelect.innerHTML = '';
+        
+        // Add options for each camera
+        availableCameras.forEach((camera, index) => {{
+          const option = document.createElement('option');
+          option.value = camera.deviceId;
+          option.text = camera.label || `Camera ${{index + 1}}`;
+          cameraSelect.appendChild(option);
+        }});
+        
+        if (availableCameras.length > 0) {{
+          selectedCameraId = availableCameras[0].deviceId;
+        }}
+        
+        // Enable switch camera button if more than one camera
+        switchCameraButton.disabled = availableCameras.length <= 1;
+      }} catch (error) {{
+        console.error("Error enumerating devices:", error);
+        debugOverlay.textContent = `Error listing cameras: ${{error.message}}`;
+      }}
+    }}
+    
+    // Handle camera selection change
+    cameraSelect.addEventListener('change', () => {{
+      selectedCameraId = cameraSelect.value;
+      if (webcamRunning) {{
+        // Stop current stream
+        if (currentStream) {{
+          currentStream.getTracks().forEach(track => track.stop());
+        }}
+        // Start new stream with selected camera
+        enableCam();
+      }}
+    }});
+    
+    // Handle switch camera button
+    switchCameraButton.addEventListener('click', () => {{
+      if (availableCameras.length <= 1) return;
+      
+      // Find current camera index
+      const currentIndex = availableCameras.findIndex(camera => camera.deviceId === selectedCameraId);
+      // Get next camera index (cycle through available cameras)
+      const nextIndex = (currentIndex + 1) % availableCameras.length;
+      // Update selected camera
+      selectedCameraId = availableCameras[nextIndex].deviceId;
+      cameraSelect.value = selectedCameraId;
+      
+      // Restart webcam with new camera
+      if (webcamRunning) {{
+        // Stop current stream
+        if (currentStream) {{
+          currentStream.getTracks().forEach(track => track.stop());
+        }}
+        // Start new stream with selected camera
+        enableCam();
+      }}
+    }});
     
     // Function to check if hands are raised
     function isHandsRaised(landmarks) {{
@@ -192,12 +279,14 @@ pose_detector_html = f"""
         debugInfo.lVisibility = lVisibility.toFixed(2);
         debugInfo.rVisibility = rVisibility.toFixed(2);
         
-        // REMOVED visibility threshold check to allow detection even with low visibility
+        // Adjust position comparison based on rotation
+        function isWristAboveShoulder(wrist, shoulder) {{
+          return wrist.y < shoulder.y;
+        }}
         
-        // Simple position-based detection: Are positions consistent with raised hands?
-        // Even with low visibility, the y-coordinates can be informative
-        const lWristAboveShoulder = lWrist.y < lShoulder.y;
-        const rWristAboveShoulder = rWrist.y < rShoulder.y;
+        // Simple position-based detection with rotation adjustment
+        const lWristAboveShoulder = isWristAboveShoulder(lWrist, lShoulder);
+        const rWristAboveShoulder = isWristAboveShoulder(rWrist, rShoulder);
         
         debugInfo.lWristAboveShoulder = lWristAboveShoulder;
         debugInfo.rWristAboveShoulder = rWristAboveShoulder;
@@ -208,11 +297,26 @@ pose_detector_html = f"""
         debugInfo.rWristY = rWrist.y.toFixed(2);
         debugInfo.rShoulderY = rShoulder.y.toFixed(2);
         
-        // Calculate angle between upper arm and vertical
+        // Calculate angle between upper arm and vertical, adjusting for rotation
         function calculateArmAngle(shoulder, elbow) {{
           // Create vectors
-          const upperArmVector = [elbow.x - shoulder.x, elbow.y - shoulder.y];
-          const verticalVector = [0, -1]; // Vertical up
+          let upperArmVector, verticalVector;
+          
+          // Always create the vector from shoulder to elbow
+          upperArmVector = [elbow.x - shoulder.x, elbow.y - shoulder.y];
+          
+          // Adjust vertical reference vector based on rotation
+          if (config.rotationAngle === 0) {{
+            verticalVector = [0, -1]; // Up is negative Y
+          }} else if (config.rotationAngle === 90) {{
+            verticalVector = [-1, 0]; // Up is negative X
+          }} else if (config.rotationAngle === 180) {{
+            verticalVector = [0, 1]; // Up is positive Y
+          }} else if (config.rotationAngle === 270) {{
+            verticalVector = [1, 0]; // Up is positive X
+          }} else {{
+            verticalVector = [0, -1]; // Default: Up is negative Y
+          }}
           
           // Calculate magnitudes
           const upperArmMag = Math.sqrt(upperArmVector[0]**2 + upperArmVector[1]**2);
@@ -239,19 +343,14 @@ pose_detector_html = f"""
         debugInfo.lAngle = lAngle.toFixed(1);
         debugInfo.rAngle = rAngle.toFixed(1);
         
-        // Using a simpler detection approach that doesn't strictly depend on visibility
-        // Just check if the positions and angles suggest raised hands
-        
-        // Check if arms are raised based on angle threshold
-        // Note we're not filtering by visibility anymore
-        const lHandRaised = lAngle <= config.angleThreshold && lWristAboveShoulder;
-        const rHandRaised = rAngle <= config.angleThreshold && rWristAboveShoulder;
+        // Make hand raised detection more lenient - we just need wrists above shoulders
+        // No strict angle requirement - just check if wrist is higher than shoulder
+        // This increases detection sensitivity to avoid false negatives
+        const lHandRaised = lWristAboveShoulder;
+        const rHandRaised = rWristAboveShoulder;
         
         debugInfo.lHandRaised = lHandRaised;
         debugInfo.rHandRaised = rHandRaised;
-        
-        // Force detection to true for testing - uncomment to force hands raised
-        // return true;
         
         // Determine if hands are raised based on configuration
         const handsRaised = config.bothHandsRequired ? 
@@ -298,6 +397,11 @@ pose_detector_html = f"""
         }});
         
         console.log("Pose landmarker created successfully");
+        
+        // Initialize camera selection first
+        await initCameraSelection();
+        
+        // Then enable webcam
         enableCam();
       }} catch (error) {{
         console.error("Error creating pose landmarker:", error);
@@ -314,10 +418,20 @@ pose_detector_html = f"""
       
       console.log("Enabling webcam...");
       
+      // Stop current stream if running
+      if (currentStream) {{
+        currentStream.getTracks().forEach(track => track.stop());
+      }}
+      
       // Request webcam access
-      navigator.mediaDevices.getUserMedia({{ video: true }})
+      const constraints = {{
+        video: selectedCameraId ? {{deviceId: selectedCameraId}} : true
+      }};
+      
+      navigator.mediaDevices.getUserMedia(constraints)
         .then((stream) => {{
           videoElement.srcObject = stream;
+          currentStream = stream;
           videoElement.addEventListener("loadeddata", predictWebcam);
           webcamRunning = true;
         }})
@@ -404,6 +518,7 @@ pose_detector_html = f"""
           debugInfo.handsRaisedPercentage = handsRaisedPercentage.toFixed(1);
           debugInfo.threshold = config.percentageThreshold;
           debugInfo.angleThreshold = config.angleThreshold;
+          debugInfo.rotation = config.rotationAngle;
           
           // Display debug information
           const debugText = Object.entries(debugInfo)
