@@ -2,19 +2,20 @@ import os
 import cv2
 import asyncio
 import base64
-from openai import AsyncOpenAI     # <-- switched to asyncopenai
+from openai import AsyncOpenAI  # <-- switched to asyncopenai
 from dotenv import load_dotenv
 
 # ─── Load environment variables ─────────────────────────────────────────────────
 load_dotenv()
 
 # ─── Configuration ─────────────────────────────────────────────────────────────
-VIDEO_PATH    = "girl_drown.mp4"                # your local video file
-FRAME_DELAY   = 0.5                             # seconds between frames
-API_KEY       = os.getenv("OPENAI_API_KEY")
-client        = AsyncOpenAI(api_key=API_KEY)
+VIDEO_PATH = "girl_drown.mp4"  # your local video file
+FRAME_DELAY = 0.5  # seconds between frames
+API_KEY = os.getenv("OPENAI_API_KEY")
+client = AsyncOpenAI(api_key=API_KEY)
 
 # ─── Helpers ────────────────────────────────────────────────────────────────────
+
 
 def frame_to_data_url(frame):
     """
@@ -29,6 +30,7 @@ def frame_to_data_url(frame):
     print("[debug] Frame encoded, length:", len(data_url))
     return data_url
 
+
 def extract_frames_in_memory(video_path, frame_delay):
     """
     Yield frames (as numpy arrays) from `video_path` every `frame_delay` seconds.
@@ -39,7 +41,7 @@ def extract_frames_in_memory(video_path, frame_delay):
     if not fps or fps <= 0:
         raise RuntimeError("Could not read FPS from video")
     print(f"[debug] Video FPS: {fps}")
-    
+
     interval = max(int(round(fps * frame_delay)), 1)
     print(f"[debug] Frame interval (in frames): {interval}")
 
@@ -59,7 +61,9 @@ def extract_frames_in_memory(video_path, frame_delay):
     cap.release()
     print(f"[debug] Released video capture, total frames yielded: {count}")
 
+
 # ─── Async Photo Analyzer ───────────────────────────────────────────────────────
+
 
 async def analyze_photo_dataurl(data_url: str, index: int | None = None) -> str:
     """
@@ -80,7 +84,7 @@ async def analyze_photo_dataurl(data_url: str, index: int | None = None) -> str:
     )
 
     content = [
-        {"type": "input_text",  "text": prompt},
+        {"type": "input_text", "text": prompt},
         {"type": "input_image", "image_url": data_url, "detail": "high"},
     ]
     response = await client.responses.create(
@@ -91,7 +95,9 @@ async def analyze_photo_dataurl(data_url: str, index: int | None = None) -> str:
     print(f"[debug] [{index}] Received summary (length {len(summary)}).")
     return summary
 
+
 # ─── Main ───────────────────────────────────────────────────────────────────────
+
 
 async def main():
     # 1. Extract frames in memory & convert to Data URLs
@@ -105,10 +111,7 @@ async def main():
 
     # 2. Analyze all frames in parallel
     print("[debug] Launching analysis tasks...")
-    tasks = [
-        analyze_photo_dataurl(url, i)
-        for i, url in enumerate(data_urls)
-    ]
+    tasks = [analyze_photo_dataurl(url, i) for i, url in enumerate(data_urls)]
     summaries = await asyncio.gather(*tasks)
 
     # 3. Print each frame's summary
@@ -116,7 +119,8 @@ async def main():
     for i, text in enumerate(summaries):
         print(f"[Frame {i:03d}]: {text}\n")
 
+
 if __name__ == "__main__":
     print("[debug] Running main()")
     asyncio.run(main())
-    print("[debug] Done.")    
+    print("[debug] Done.")

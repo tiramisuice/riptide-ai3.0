@@ -11,6 +11,7 @@ import streamlit.components.v1 as components
 
 HERE = Path(__file__).parent
 
+
 @st.cache_data
 def get_alarm_audio():
     """Load alarm sound file"""
@@ -20,17 +21,22 @@ def get_alarm_audio():
             return f.read()
     return None
 
+
 # Alarm settings in sidebar
 st.sidebar.header("Detection Settings")
 angle_threshold = st.sidebar.slider("Arm angle threshold (degrees)", 0, 180, 70, 5)
-visibility_threshold = st.sidebar.slider("Landmark visibility threshold", 0.0, 1.0, 0.0, 0.05)
+visibility_threshold = st.sidebar.slider(
+    "Landmark visibility threshold", 0.0, 1.0, 0.0, 0.05
+)
 both_hands_required = st.sidebar.checkbox("Require both hands raised", value=False)
 
 st.sidebar.header("Alarm Settings")
 enable_alarm = st.sidebar.checkbox("Enable hands raised alarm", value=True)
 alarm_cooldown = st.sidebar.slider("Alarm cooldown (seconds)", 1, 30, 5)
 pose_duration_threshold = st.sidebar.slider("Hands raised duration (seconds)", 1, 10, 3)
-percentage_threshold = st.sidebar.slider("% of time hands must be raised", 50, 100, 90, 5)
+percentage_threshold = st.sidebar.slider(
+    "% of time hands must be raised", 50, 100, 90, 5
+)
 
 # Video settings in sidebar
 st.sidebar.header("Video Settings")
@@ -39,12 +45,14 @@ rotation_angle = st.sidebar.selectbox("Rotation angle", [0, 90, 180, 270], index
 # Get the alarm audio data
 alarm_audio = get_alarm_audio()
 if enable_alarm and alarm_audio is None:
-    st.sidebar.error("Alarm sound file not found. Please add 'alarm.mp3' to the app directory.")
+    st.sidebar.error(
+        "Alarm sound file not found. Please add 'alarm.mp3' to the app directory."
+    )
 
 # Initialize session state for alarm
-if 'last_alarm_time' not in st.session_state:
+if "last_alarm_time" not in st.session_state:
     st.session_state.last_alarm_time = 0
-if 'alarm_triggered' not in st.session_state:
+if "alarm_triggered" not in st.session_state:
     st.session_state.alarm_triggered = False
 
 # Create placeholders for alarm UI elements
@@ -582,7 +590,7 @@ pose_detector_html = f"""
 pose_component = components.html(pose_detector_html, height=600)
 
 # Debug output for easy troubleshooting
-if 'debug' not in st.session_state:
+if "debug" not in st.session_state:
     st.session_state.debug = []
 
 # Initialize status display
@@ -593,24 +601,34 @@ if st.session_state.alarm_triggered:
 # Handle component events
 if pose_component and isinstance(pose_component, dict):
     current_time = time.time()
-    
+
     # Add to debug log
     st.session_state.debug.append(f"Component data: {pose_component}")
-    
+
     # Handle hands raised event
-    if pose_component.get("hands_raised", False) and enable_alarm and alarm_audio is not None:
+    if (
+        pose_component.get("hands_raised", False)
+        and enable_alarm
+        and alarm_audio is not None
+    ):
         alarm_status.warning("⚠️ ALERT: Hands raised detected for extended period!")
-        
+
         # Play alarm sound if cooldown has passed
-        if not st.session_state.alarm_triggered and (current_time - st.session_state.last_alarm_time) > alarm_cooldown:
+        if (
+            not st.session_state.alarm_triggered
+            and (current_time - st.session_state.last_alarm_time) > alarm_cooldown
+        ):
             st.session_state.last_alarm_time = current_time
             st.session_state.alarm_triggered = True
             audio_b64 = base64.b64encode(alarm_audio).decode()
             alarm_player.markdown(
                 f'<audio autoplay><source src="data:audio/mp3;base64,{audio_b64}" type="audio/mp3"></audio>',
-                unsafe_allow_html=True
+                unsafe_allow_html=True,
             )
-    elif not pose_component.get("hands_raised", True) and st.session_state.alarm_triggered:
+    elif (
+        not pose_component.get("hands_raised", True)
+        and st.session_state.alarm_triggered
+    ):
         alarm_status.empty()
         alarm_player.empty()
         st.session_state.alarm_triggered = False
@@ -623,9 +641,11 @@ with st.expander("Debug Information", expanded=False):
         st.session_state.debug = []
 
 # About section
-st.markdown("""
+st.markdown(
+    """
 ---
 ## About
 This demo uses MediaPipe Pose Detection running in your browser for maximum performance.
 The pose detection runs at 25-30 FPS on most modern devices.
-""")
+"""
+)
