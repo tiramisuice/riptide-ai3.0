@@ -1,4 +1,6 @@
 .env
+output_photos/
 [server]
 enableXsrfProtection = false
 enableCORS = false
+__pycache__/
